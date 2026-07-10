@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ticket Support Agent</title>
+  <style>
+    :root { color-scheme: light dark; --gap: 12px; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      margin: 0; padding: 24px; max-width: 760px; margin-inline: auto;
+      line-height: 1.45;
+    }
+    h1 { font-size: 1.25rem; margin: 0 0 4px; }
+    p.sub { margin: 0 0 20px; opacity: 0.7; font-size: 0.9rem; }
+    form { display: grid; gap: var(--gap); }
+    label { font-size: 0.8rem; font-weight: 600; opacity: 0.8; display: block; margin-bottom: 4px; }
+    input, textarea {
+      width: 100%; padding: 8px 10px; border-radius: 8px;
+      border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+      background: transparent; color: inherit; font: inherit;
+    }
+    textarea { min-height: 72px; resize: vertical; }
+    .row { display: flex; gap: var(--gap); flex-wrap: wrap; }
+    .row > div { flex: 1; min-width: 180px; }
+    .actions { display: flex; gap: var(--gap); align-items: center; }
+    button {
+      padding: 9px 16px; border-radius: 8px; border: 0; cursor: pointer;
+      font: inherit; font-weight: 600;
+    }
+    button.primary { background: #4f46e5; color: #fff; }
+    button.secondary { background: transparent; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); color: inherit; }
+    button:disabled { opacity: 0.5; cursor: default; }
+    details { font-size: 0.8rem; opacity: 0.8; }
+    #transcript { margin-top: 24px; display: grid; gap: 10px; }
+    .msg { padding: 10px 12px; border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .msg.user { background: color-mix(in srgb, #4f46e5 18%, transparent); justify-self: end; max-width: 85%; }
+    .msg.assistant { background: color-mix(in srgb, currentColor 8%, transparent); justify-self: start; max-width: 85%; }
+    .meta { font-size: 0.78rem; opacity: 0.6; font-style: italic; }
+    .error { color: #dc2626; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <h1>Ticket Support Agent</h1>
+  <p class="sub">Enter a ticket ID and a message, then Run. The agent looks up the ticket and replies. Conversation continues in one thread until you start a new one. Try <code>TICKET-101</code> or <code>TICKET-102</code>.</p>
+
+  <form id="form">
+    <div class="row">
+      <div>
+        <label for="ticket">Ticket ID</label>
+        <input id="ticket" name="ticket" value="TICKET-101" autocomplete="off" />
+      </div>
+    </div>
+    <div>
+      <label for="message">Message</label>
+      <textarea id="message" name="message" placeholder="What's the status of this ticket?"></textarea>
+    </div>
+    <details>
+      <summary>Deployment auth</summary>
+      <div style="margin-top:8px">
+        <label for="apikey">LangSmith API key</label>
+        <input id="apikey" name="apikey" type="password" autocomplete="off"
+               placeholder="blank for local dev · required on a LangSmith deployment" />
+        <p class="sub" style="margin-top:6px">
+          Blank for local <code>langgraph dev</code> (no auth). <strong>Required</strong> when this
+          page runs on a LangSmith deployment — the Runs API is gated by <code>x-api-key</code>.
+          Kept in memory for this tab only (not stored). Don't use on a page shared with untrusted users.
+        </p>
+      </div>
+    </details>
+    <div class="actions">
+      <button type="submit" class="primary" id="run">Run</button>
+      <button type="button" class="secondary" id="reset">New conversation</button>
+      <span id="status" class="meta"></span>
+    </div>
+  </form>
+
+  <div id="transcript"></div>
+
+  <script>
+    // Talks to the deployment's built-in Runs API directly with fetch (same-origin) — the
+    // same REST endpoints the LangGraph SDK wraps. No SDK/CDN dependency: the SDK's browser
+    // bundle drags in a large dep graph that doesn't load reliably from ESM CDNs.
+    const ASSISTANT_ID = "agent"; // graph key in langgraph.json
+    let threadId = null;
+
+    const $ = (id) => document.getElementById(id);
+    const form = $("form"), runBtn = $("run"), resetBtn = $("reset");
+    const statusEl = $("status"), transcript = $("transcript");
+
+    // Build a DOM node with text set via textContent (never innerHTML) so any
+    // model / tool / error output is inert and cannot inject markup.
+    function node(cls, text) {
+      const div = document.createElement("div");
+      div.className = cls;
+      if (text != null) div.textContent = text;
+      return div;
+    }
+
+    // Extract plain text from a message whose content is a string or block list.
+    function textOf(content) {
+      if (typeof content === "string") return content;
+      if (Array.isArray(content)) {
+        return content
+          .map((b) => (typeof b === "string" ? b : b?.type === "text" ? b.text : ""))
+          .join("");
+      }
+      return "";
+    }
+
+    // Render the authoritative message list returned by the run.
+    function render(messages) {
+      transcript.replaceChildren();
+      for (const m of messages || []) {
+        const type = m.type || m.role;
+        if (type === "human" || type === "user") {
+          transcript.append(node("msg user", textOf(m.content)));
+        } else if (type === "ai" || type === "assistant") {
+          const text = textOf(m.content).trim();
+          if (text) transcript.append(node("msg assistant", text));
+          for (const call of m.tool_calls || []) {
+            const args = call.args?.ticket_id ?? JSON.stringify(call.args ?? {});
+            transcript.append(node("meta", `\u{1F527} called ${call.name}(${args})`));
+          }
+        } else if (type === "tool") {
+          transcript.append(node("meta", `\u{2699}\u{FE0F} ${m.name || "tool"} → ${textOf(m.content)}`));
+        }
+      }
+    }
+
+    // POST to a fixed Runs-API path on the same origin. apiKey (if provided) is sent only
+    // as the x-api-key header; it is read from the field per call and never stored/logged.
+    async function api(path, apiKey, body) {
+      const headers = { "content-type": "application/json" };
+      if (apiKey) headers["x-api-key"] = apiKey;
+      const res = await fetch(location.origin + path, {
+        method: "POST", headers, body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const detail = (await res.text().catch(() => "")).slice(0, 300);
+        throw new Error(`${res.status} ${res.statusText}${detail ? " — " + detail : ""}`);
+      }
+      return res.json();
+    }
+
+    async function run(message, ticketId, apiKey) {
+      if (!threadId) threadId = (await api("/threads", apiKey, {})).thread_id;
+      const state = await api(`/threads/${threadId}/runs/wait`, apiKey, {
+        assistant_id: ASSISTANT_ID,
+        input: { messages: [{ role: "user", content: message }], ticket_id: ticketId },
+      });
+      if (state && state.__error__) {
+        throw new Error(`${state.__error__.error}: ${state.__error__.message}`);
+      }
+      return state; // final thread state: { messages: [...], ticket_id: "..." }
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const message = $("message").value.trim();
+      const ticketId = $("ticket").value.trim();
+      if (!message) return;
+
+      runBtn.disabled = true;
+      statusEl.textContent = "thinking…";
+      // Optimistically show the user's message + a placeholder while we wait.
+      transcript.append(node("msg user", message));
+      const thinking = node("meta", "assistant is working…");
+      transcript.append(thinking);
+
+      try {
+        const state = await run(message, ticketId, $("apikey").value.trim());
+        render(state.messages);
+        $("message").value = "";
+        statusEl.textContent = "";
+      } catch (err) {
+        thinking.remove();
+        transcript.append(node("error", `Error: ${err && err.message ? err.message : err}`));
+        statusEl.textContent = "";
+      } finally {
+        runBtn.disabled = false;
+      }
+    });
+
+    resetBtn.addEventListener("click", () => {
+      threadId = null;
+      transcript.replaceChildren();
+      statusEl.textContent = "new thread";
+    });
+  </script>
+</body>
+</html>
