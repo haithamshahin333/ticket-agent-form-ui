@@ -1,10 +1,10 @@
 [project]
-name = "ticket-agent-ui"
+name = "underwriting-pipeline"
 version = "0.0.1"
-description = "Minimal LangGraph ticket-support agent with a coupled single-file form UI."
+description = "Multi-node LangGraph underwriting pipeline with a coupled single-file form UI, deployable on LangSmith."
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "langchain>=1.0,<2.0",
     "langchain-core>=1.0,<2.0",
@@ -61,7 +61,11 @@ convention = "google"
 [dependency-groups]
 dev = [
     "anyio>=4.7.0",
-    "langgraph-cli[inmem]>=0.4.14",
+    "langgraph-cli[inmem]>=0.4.30",
+    # Pin the local dev server (a langgraph-cli[inmem] transitive) to a supported line.
+    # Older langgraph-api (<=0.7.x) is EOL and crashes on boot against current Starlette
+    # (references the removed `Router.on_startup`), so keep the floor on the current major.
+    "langgraph-api>=0.11.0",
     "mypy>=1.13.0",
     "pytest>=9.0.3",
     "ruff>=0.8.2",
