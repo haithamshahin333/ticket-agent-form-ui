@@ -1,0 +1,41 @@
+.env.example
+  s_e0193686000acf::t_99eb64229d2ca8 1-13
+.gitignore
+  s_e0193686000acf::t_956240999b3187 1-175
+LICENSE
+  s_e0193686000acf::t_97c66a7814bb1c 1-21
+README.md
+  s_e0193686000acf::t_aa73c4bd2cccb6 1-145
+langgraph.json
+  s_e0193686000acf::t_0f1a2a0e816c2c 1-12
+pyproject.toml
+  s_e0193686000acf::t_6bd250e34797ff 1-68
+src/agent/__init__.py
+  s_e0193686000acf::t_0c066be29b0946 1-8
+src/agent/graph.py
+  s_e0193686000acf::t_34f7a00b4fc72c 1-85
+src/agent/model.py
+  s_e0193686000acf::t_862d2de455d1f9 1-36
+src/agent/static/index.html
+  s_e0193686000acf::t_fd736bf6d85548 1-193
+src/agent/webapp.py
+  s_e0193686000acf::t_8453f002b957b0 1-22
+uv.lock
+  s_e0193686000acf::t_523cfe1e7393f4 1-2091
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.11",
+  "base_commit_sha": "7f6bc247851b4863304f00c92fa7ced9c9967ee1",
+  "prompts": {},
+  "sessions": {
+    "s_e0193686000acf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e9f389bb-9c1b-434c-906a-1ec8b74b5b70",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "haithamshahin333 <42976403+haithamshahin333@users.noreply.github.com>"
+    }
+  }
+}
