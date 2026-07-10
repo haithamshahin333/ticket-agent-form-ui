@@ -1,0 +1,29 @@
+# Keep secrets, local state, and noise out of the Docker build context.
+# The langgraph-generated Dockerfile does `ADD . /deps/<project>`, so anything not
+# ignored here is baked into an image layer. `.env` is still read client-side by
+# `langgraph deploy` to upload secrets — this only prevents the raw file from shipping.
+
+# secrets / local env
+.env
+.env.*
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+credentials.json
+token.json
+
+# vcs + local dev state
+.git/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.DS_Store
+
+# not needed in the runtime image
+docs/
+tests/
