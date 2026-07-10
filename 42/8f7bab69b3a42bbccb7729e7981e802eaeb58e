@@ -1,0 +1,19 @@
+src/agent/static/index.html
+  s_e0193686000acf::t_c7fab3880b5f93 52,57,63-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.11",
+  "base_commit_sha": "428f7bab69b3a42bbccb7729e7981e802eaeb58e",
+  "prompts": {},
+  "sessions": {
+    "s_e0193686000acf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e9f389bb-9c1b-434c-906a-1ec8b74b5b70",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "haithamshahin333 <42976403+haithamshahin333@users.noreply.github.com>"
+    }
+  }
+}
