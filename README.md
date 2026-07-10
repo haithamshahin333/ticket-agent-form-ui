@@ -15,7 +15,9 @@ its own span in LangSmith. Deployable on LangSmith Deployments; scaffolded with 
 
 ## Deploy to LangSmith (`langgraph deploy`)
 
-Exactly what to do to put this on a LangSmith Deployment.
+Exactly what to do to put this on a LangSmith Deployment. (`langgraph deploy` is a **beta** CLI
+command under active development; the LangSmith **Deployments** UI — see the note under
+[Manage the deployment](#manage-the-deployment) — is the stable alternative.)
 
 ### Prerequisites
 - A **LangSmith account** and API key (create one at https://smith.langchain.com → Settings → API Keys).
@@ -96,10 +98,11 @@ privileged key ever reaches the browser.
 
 ## Run locally
 
-Requires Python 3.11+ and [`uv`](https://docs.astral.sh/uv/).
+Requires Python 3.11+ and [`uv`](https://docs.astral.sh/uv/). Tested on **3.11–3.13**: `langgraph-api`
+dropped 3.10, and the dev server's native deps don't build on 3.14 yet — stay in that range.
 
 ```bash
-cd underwriting-pipeline
+cd ticket-agent-form-ui
 uv venv && source .venv/bin/activate
 uv pip install -e .                      # install this project's deps
 uv pip install "langgraph-cli[inmem]"    # the dev server
@@ -111,6 +114,11 @@ langgraph dev                            # starts the agent server on http://loc
 Open **http://localhost:2024/app**, click **Load sample application**, then **Analyze application**.
 Leave the API-key field blank — the local dev server needs no auth. Bump the prior-loss figures up
 and re-run to watch the decision move from **quote** → **refer** → **decline**.
+
+> **Tracing locally:** runs export to LangSmith only when `LANGSMITH_TRACING=true` and
+> `LANGSMITH_API_KEY` are set, and they land in the `default` project unless you also set
+> `LANGSMITH_PROJECT` (see `.env.example`). Unlike a deployment, local `langgraph dev` does not name
+> the project for you.
 
 Run the tool tests (pure functions — no model, no network):
 ```bash
