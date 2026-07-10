@@ -49,18 +49,21 @@
     <div class="row">
       <div>
         <label for="ticket">Ticket ID</label>
-        <input id="ticket" name="ticket" value="TICKET-101" autocomplete="off" />
+        <input id="ticket" value="TICKET-101" autocomplete="off" />
       </div>
     </div>
     <div>
       <label for="message">Message</label>
-      <textarea id="message" name="message" placeholder="What's the status of this ticket?"></textarea>
+      <textarea id="message" placeholder="What's the status of this ticket?"></textarea>
     </div>
     <details>
       <summary>Deployment auth</summary>
       <div style="margin-top:8px">
         <label for="apikey">LangSmith API key</label>
-        <input id="apikey" name="apikey" type="password" autocomplete="off"
+        <!-- No `name` attribute: the whole flow is JS/fetch-driven (values read by id), so the
+             field is never form-serialized. This guarantees the key can't leak into a GET query
+             string / URL / history even if the submit handler ever fails to attach. -->
+        <input id="apikey" type="password" autocomplete="off"
                placeholder="blank for local dev · required on a LangSmith deployment" />
         <p class="sub" style="margin-top:6px">
           Blank for local <code>langgraph dev</code> (no auth). <strong>Required</strong> when this
