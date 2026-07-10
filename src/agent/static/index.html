@@ -3,59 +3,135 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ticket Support Agent</title>
+  <title>Underwriting Analysis Pipeline</title>
   <style>
-    :root { color-scheme: light dark; --gap: 12px; }
+    :root { color-scheme: light dark; --gap: 12px; --line: color-mix(in srgb, currentColor 18%, transparent); }
     * { box-sizing: border-box; }
     body {
       font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      margin: 0; padding: 24px; max-width: 760px; margin-inline: auto;
-      line-height: 1.45;
+      margin: 0; padding: 24px; max-width: 880px; margin-inline: auto; line-height: 1.45;
     }
-    h1 { font-size: 1.25rem; margin: 0 0 4px; }
+    h1 { font-size: 1.3rem; margin: 0 0 4px; }
+    h2 { font-size: 1.0rem; margin: 22px 0 10px; }
     p.sub { margin: 0 0 20px; opacity: 0.7; font-size: 0.9rem; }
     form { display: grid; gap: var(--gap); }
-    label { font-size: 0.8rem; font-weight: 600; opacity: 0.8; display: block; margin-bottom: 4px; }
-    input, textarea {
-      width: 100%; padding: 8px 10px; border-radius: 8px;
-      border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+    fieldset { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+    legend { font-size: 0.8rem; font-weight: 700; opacity: 0.8; padding: 0 6px; }
+    label { font-size: 0.75rem; font-weight: 600; opacity: 0.8; display: block; margin-bottom: 4px; }
+    input, textarea, select {
+      width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line);
       background: transparent; color: inherit; font: inherit;
     }
-    textarea { min-height: 72px; resize: vertical; }
-    .row { display: flex; gap: var(--gap); flex-wrap: wrap; }
-    .row > div { flex: 1; min-width: 180px; }
-    .actions { display: flex; gap: var(--gap); align-items: center; }
-    button {
-      padding: 9px 16px; border-radius: 8px; border: 0; cursor: pointer;
-      font: inherit; font-weight: 600;
-    }
+    textarea { min-height: 60px; resize: vertical; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--gap); }
+    .check { display: flex; align-items: center; gap: 8px; margin-top: 22px; }
+    .check input { width: auto; }
+    .check label { margin: 0; }
+    .actions { display: flex; gap: var(--gap); align-items: center; flex-wrap: wrap; }
+    button { padding: 9px 16px; border-radius: 8px; border: 0; cursor: pointer; font: inherit; font-weight: 600; }
     button.primary { background: #4f46e5; color: #fff; }
     button.secondary { background: transparent; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); color: inherit; }
     button:disabled { opacity: 0.5; cursor: default; }
-    details { font-size: 0.8rem; opacity: 0.8; }
-    #transcript { margin-top: 24px; display: grid; gap: 10px; }
-    .msg { padding: 10px 12px; border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
-    .msg.user { background: color-mix(in srgb, #4f46e5 18%, transparent); justify-self: end; max-width: 85%; }
-    .msg.assistant { background: color-mix(in srgb, currentColor 8%, transparent); justify-self: start; max-width: 85%; }
-    .meta { font-size: 0.78rem; opacity: 0.6; font-style: italic; }
-    .error { color: #dc2626; font-size: 0.85rem; }
+    details { font-size: 0.8rem; opacity: 0.85; }
+    .meta { font-size: 0.78rem; opacity: 0.65; font-style: italic; }
+    .error { color: #dc2626; font-size: 0.85rem; white-space: pre-wrap; }
+
+    /* pipeline progress */
+    #pipeline { margin-top: 24px; display: none; }
+    .stage { display: grid; grid-template-columns: 22px 1fr; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+    .stage:first-child { border-top: 0; }
+    .dot { width: 14px; height: 14px; border-radius: 50%; margin-top: 4px; border: 2px solid color-mix(in srgb, currentColor 35%, transparent); }
+    .stage[data-state="running"] .dot { border-color: #4f46e5; border-top-color: transparent; animation: spin 0.8s linear infinite; }
+    .stage[data-state="done"] .dot { background: #16a34a; border-color: #16a34a; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .stage .name { font-weight: 600; font-size: 0.9rem; }
+    .stage .note { font-size: 0.85rem; opacity: 0.8; margin-top: 2px; }
+
+    /* report */
+    #report { margin-top: 24px; display: none; }
+    .card { border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-weight: 700; font-size: 0.9rem; letter-spacing: 0.03em; text-transform: uppercase; }
+    .badge.quote { background: color-mix(in srgb, #16a34a 22%, transparent); color: #16a34a; }
+    .badge.refer { background: color-mix(in srgb, #d97706 24%, transparent); color: #d97706; }
+    .badge.decline { background: color-mix(in srgb, #dc2626 22%, transparent); color: #dc2626; }
+    .headline { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 6px; }
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 16px 0; }
+    .kpi { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+    .kpi .k { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.6; }
+    .kpi .v { font-size: 1.15rem; font-weight: 700; margin-top: 2px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); }
+    th:last-child, td:last-child { text-align: right; }
+    ul { margin: 6px 0 0; padding-left: 18px; }
+    li { margin: 3px 0; font-size: 0.9rem; }
+    .summary { margin-top: 8px; font-size: 0.95rem; }
   </style>
 </head>
 <body>
-  <h1>Ticket Support Agent</h1>
-  <p class="sub">Enter a ticket ID and a message, then Run. The agent looks up the ticket and replies. Conversation continues in one thread until you start a new one. Try <code>TICKET-101</code> or <code>TICKET-102</code>.</p>
+  <h1>Commercial Property — Underwriting Analysis</h1>
+  <p class="sub">
+    Submit an application. A four-stage LangGraph pipeline
+    (<strong>intake → risk → pricing → decision</strong>) analyzes it and returns a structured
+    underwriting recommendation. Not a chatbot — each stage is its own node and its own span in
+    LangSmith. Data is synthetic; try <em>Load sample application</em>, then push the prior-loss
+    figures up to watch the decision flip from <em>quote</em> to <em>refer</em>/<em>decline</em>.
+  </p>
 
   <form id="form">
-    <div class="row">
-      <div>
-        <label for="ticket">Ticket ID</label>
-        <input id="ticket" value="TICKET-101" autocomplete="off" />
+    <fieldset>
+      <legend>Applicant</legend>
+      <div class="grid">
+        <div><label for="business_name">Business name</label><input id="business_name" autocomplete="off" /></div>
+        <div>
+          <label for="industry">Industry</label>
+          <select id="industry">
+            <option value="office">Office</option>
+            <option value="professional_services">Professional services</option>
+            <option value="retail">Retail</option>
+            <option value="warehouse">Warehouse</option>
+            <option value="restaurant">Restaurant</option>
+            <option value="hospitality">Hospitality</option>
+            <option value="manufacturing">Manufacturing</option>
+            <option value="auto_service">Auto service</option>
+            <option value="woodworking">Woodworking</option>
+            <option value="chemical">Chemical</option>
+          </select>
+        </div>
+        <div><label for="state">State (2-letter)</label><input id="state" maxlength="2" autocomplete="off" /></div>
+        <div><label for="years_in_business">Years in business</label><input id="years_in_business" type="number" min="0" step="1" /></div>
       </div>
-    </div>
-    <div>
-      <label for="message">Message</label>
-      <textarea id="message" placeholder="What's the status of this ticket?"></textarea>
-    </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Exposure & coverage (USD)</legend>
+      <div class="grid">
+        <div><label for="annual_revenue">Annual revenue</label><input id="annual_revenue" type="number" min="0" step="1000" /></div>
+        <div><label for="tiv">Total insured value (TIV)</label><input id="tiv" type="number" min="0" step="1000" /></div>
+        <div><label for="requested_limit">Requested limit</label><input id="requested_limit" type="number" min="0" step="1000" /></div>
+        <div><label for="deductible">Deductible</label><input id="deductible" type="number" min="0" step="500" /></div>
+        <div>
+          <label for="construction_type">Construction</label>
+          <select id="construction_type">
+            <option value="frame">Frame</option>
+            <option value="joisted_masonry">Joisted masonry</option>
+            <option value="non_combustible">Non-combustible</option>
+            <option value="masonry_non_combustible">Masonry non-combustible</option>
+            <option value="fire_resistive">Fire-resistive</option>
+          </select>
+        </div>
+        <div class="check"><input id="sprinklered" type="checkbox" /><label for="sprinklered">Sprinklered</label></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Loss history</legend>
+      <div class="grid">
+        <div><label for="prior_claims_count">Prior claims (count)</label><input id="prior_claims_count" type="number" min="0" step="1" /></div>
+        <div><label for="prior_claims_incurred">Prior incurred losses (USD)</label><input id="prior_claims_incurred" type="number" min="0" step="1000" /></div>
+      </div>
+      <div style="margin-top:12px"><label for="notes">Adjuster notes (optional)</label><textarea id="notes" placeholder="Free text — treated as data only"></textarea></div>
+    </fieldset>
+
     <details>
       <summary>Deployment auth</summary>
       <div style="margin-top:8px">
@@ -72,124 +148,286 @@
         </p>
       </div>
     </details>
+
     <div class="actions">
-      <button type="submit" class="primary" id="run">Run</button>
-      <button type="button" class="secondary" id="reset">New conversation</button>
+      <button type="submit" class="primary" id="run">Analyze application</button>
+      <button type="button" class="secondary" id="sample">Load sample application</button>
       <span id="status" class="meta"></span>
     </div>
   </form>
 
-  <div id="transcript"></div>
+  <div id="pipeline"></div>
+  <div id="report"></div>
+  <div id="errbox"></div>
 
   <script>
-    // Talks to the deployment's built-in Runs API directly with fetch (same-origin) — the
-    // same REST endpoints the LangGraph SDK wraps. No SDK/CDN dependency: the SDK's browser
-    // bundle drags in a large dep graph that doesn't load reliably from ESM CDNs.
+    // Talks to the deployment's built-in Runs API directly with fetch (same-origin) — the same
+    // REST endpoints the LangGraph SDK wraps. No SDK/CDN dependency (its browser bundle drags in
+    // a large dep graph that doesn't load reliably from ESM CDNs). Each analysis is a fresh thread.
     const ASSISTANT_ID = "agent"; // graph key in langgraph.json
-    let threadId = null;
 
     const $ = (id) => document.getElementById(id);
-    const form = $("form"), runBtn = $("run"), resetBtn = $("reset");
-    const statusEl = $("status"), transcript = $("transcript");
+    const form = $("form"), runBtn = $("run"), sampleBtn = $("sample");
+    const statusEl = $("status"), pipelineEl = $("pipeline"), reportEl = $("report"), errBox = $("errbox");
 
-    // Build a DOM node with text set via textContent (never innerHTML) so any
-    // model / tool / error output is inert and cannot inject markup.
-    function node(cls, text) {
-      const div = document.createElement("div");
-      div.className = cls;
-      if (text != null) div.textContent = text;
-      return div;
+    const STAGES = [
+      { node: "intake",   label: "Intake & validation" },
+      { node: "risk",     label: "Risk scoring" },
+      { node: "pricing",  label: "Pricing" },
+      { node: "decision", label: "Underwriting decision" },
+    ];
+    // Where each node's one-line commentary lives inside its state update.
+    const COMMENTARY = {
+      intake:   (u) => u?.intake_result?.commentary,
+      risk:     (u) => u?.risk_result?.commentary,
+      pricing:  (u) => u?.pricing_result?.commentary,
+      decision: (u) => u?.report?.summary,
+    };
+
+    const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+
+    // Build a DOM node with text set via textContent (never innerHTML) so any model / tool /
+    // error output is inert and cannot inject markup.
+    function el(tag, cls, text) {
+      const n = document.createElement(tag);
+      if (cls) n.className = cls;
+      if (text != null) n.textContent = text;
+      return n;
     }
 
-    // Extract plain text from a message whose content is a string or block list.
-    function textOf(content) {
-      if (typeof content === "string") return content;
-      if (Array.isArray(content)) {
-        return content
-          .map((b) => (typeof b === "string" ? b : b?.type === "text" ? b.text : ""))
-          .join("");
+    // ---- pipeline progress -------------------------------------------------
+
+    function resetPipeline() {
+      reportEl.style.display = "none"; reportEl.replaceChildren();
+      errBox.replaceChildren();
+      pipelineEl.replaceChildren(el("h2", null, "Pipeline"));
+      for (const s of STAGES) {
+        const row = el("div", "stage"); row.dataset.state = "pending"; row.id = "stage-" + s.node;
+        row.append(el("div", "dot"));
+        const body = el("div"); body.append(el("div", "name", s.label)); body.append(el("div", "note"));
+        row.append(body);
+        pipelineEl.append(row);
       }
-      return "";
+      pipelineEl.style.display = "block";
     }
 
-    // Render the authoritative message list returned by the run.
-    function render(messages) {
-      transcript.replaceChildren();
-      for (const m of messages || []) {
-        const type = m.type || m.role;
-        if (type === "human" || type === "user") {
-          transcript.append(node("msg user", textOf(m.content)));
-        } else if (type === "ai" || type === "assistant") {
-          const text = textOf(m.content).trim();
-          if (text) transcript.append(node("msg assistant", text));
-          for (const call of m.tool_calls || []) {
-            const args = call.args?.ticket_id ?? JSON.stringify(call.args ?? {});
-            transcript.append(node("meta", `\u{1F527} called ${call.name}(${args})`));
-          }
-        } else if (type === "tool") {
-          transcript.append(node("meta", `\u{2699}\u{FE0F} ${m.name || "tool"} → ${textOf(m.content)}`));
+    function markStage(node, update) {
+      // Mark the completed node done and set the currently-running one (next pending).
+      const row = $("stage-" + node);
+      if (row) {
+        row.dataset.state = "done";
+        const note = COMMENTARY[node]?.(update);
+        if (note) row.querySelector(".note").textContent = note;
+      }
+      const next = pipelineEl.querySelector('.stage[data-state="pending"]');
+      if (next) next.dataset.state = "running";
+    }
+
+    // ---- report ------------------------------------------------------------
+
+    function kpi(k, v) {
+      const box = el("div", "kpi"); box.append(el("div", "k", k)); box.append(el("div", "v", v)); return box;
+    }
+    function list(items) {
+      const ul = el("ul");
+      for (const it of items || []) ul.append(el("li", null, it));
+      return ul;
+    }
+
+    function renderReport(r) {
+      if (!r) return;
+      reportEl.replaceChildren(el("h2", null, "Underwriting recommendation"));
+      const card = el("div", "card");
+
+      const head = el("div", "headline");
+      const decision = String(r.decision || "").toLowerCase();
+      head.append(el("span", "badge " + decision, decision || "n/a"));
+      const who = [r.business_name, r.industry, r.state].filter(Boolean).join(" · ");
+      if (who) head.append(el("span", "meta", who));
+      if (r.confidence != null) head.append(el("span", "meta", `confidence ${Math.round(r.confidence * 100)}%`));
+      card.append(head);
+
+      if (r.summary) card.append(el("div", "summary", r.summary));
+
+      const kpis = el("div", "kpis");
+      if (r.premium != null) kpis.append(kpi("Indicated premium", usd.format(r.premium)));
+      if (r.risk_score != null) kpis.append(kpi("Risk score", `${r.risk_score} / 100 (${r.risk_band || ""})`));
+      if (r.rate_per_1k_tiv != null) kpis.append(kpi("Rate / $1k TIV", `$${r.rate_per_1k_tiv}`));
+      if (r.exposure && r.exposure.coverage_ratio != null) kpis.append(kpi("Coverage ratio", String(r.exposure.coverage_ratio)));
+      card.append(kpis);
+      if (r.adequacy) card.append(el("div", "meta", `Rate adequacy: ${r.adequacy}`));
+
+      // Risk factor table — built entirely from DOM nodes (no innerHTML).
+      if (Array.isArray(r.factors) && r.factors.length) {
+        card.append(el("h2", null, "Risk factors"));
+        const table = el("table");
+        const thead = el("tr");
+        ["Factor", "Detail", "Points"].forEach((h) => thead.append(el("th", null, h)));
+        table.append(thead);
+        for (const f of r.factors) {
+          const tr = el("tr");
+          tr.append(el("td", null, f.name));
+          tr.append(el("td", null, f.detail));
+          tr.append(el("td", null, String(f.points)));
+          table.append(tr);
         }
+        card.append(table);
       }
+
+      if (r.conditions && r.conditions.length) { card.append(el("h2", null, "Conditions")); card.append(list(r.conditions)); }
+      if (r.reasons && r.reasons.length) { card.append(el("h2", null, "Rationale")); card.append(list(r.reasons)); }
+      if (r.warnings && r.warnings.length) { card.append(el("h2", null, "Data warnings")); card.append(list(r.warnings)); }
+
+      reportEl.append(card);
+      reportEl.style.display = "block";
     }
 
-    // POST to a fixed Runs-API path on the same origin. apiKey (if provided) is sent only
-    // as the x-api-key header; it is read from the field per call and never stored/logged.
-    async function api(path, apiKey, body) {
-      const headers = { "content-type": "application/json" };
-      if (apiKey) headers["x-api-key"] = apiKey;
-      const res = await fetch(location.origin + path, {
-        method: "POST", headers, body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const detail = (await res.text().catch(() => "")).slice(0, 300);
-        throw new Error(`${res.status} ${res.statusText}${detail ? " — " + detail : ""}`);
-      }
+    // ---- Runs API ----------------------------------------------------------
+
+    function readApplication() {
+      const num = (id) => { const v = $(id).value.trim(); return v === "" ? undefined : Number(v); };
+      const app = {
+        business_name: $("business_name").value.trim(),
+        industry: $("industry").value,
+        state: $("state").value.trim(),
+        years_in_business: num("years_in_business"),
+        annual_revenue: num("annual_revenue"),
+        requested_limit: num("requested_limit"),
+        deductible: num("deductible"),
+        tiv: num("tiv"),
+        construction_type: $("construction_type").value,
+        sprinklered: $("sprinklered").checked,
+        prior_claims_count: num("prior_claims_count"),
+        prior_claims_incurred: num("prior_claims_incurred"),
+        notes: $("notes").value.trim(),
+      };
+      Object.keys(app).forEach((k) => app[k] === undefined && delete app[k]);
+      return app;
+    }
+
+    function headers(apiKey) {
+      const h = { "content-type": "application/json" };
+      if (apiKey) h["x-api-key"] = apiKey; // key sent ONLY as a header; never serialized/stored/logged
+      return h;
+    }
+
+    async function postJSON(path, apiKey, body) {
+      const res = await fetch(location.origin + path, { method: "POST", headers: headers(apiKey), body: JSON.stringify(body) });
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText} — ${(await res.text().catch(() => "")).slice(0, 300)}`);
       return res.json();
     }
 
-    async function run(message, ticketId, apiKey) {
-      if (!threadId) threadId = (await api("/threads", apiKey, {})).thread_id;
-      const state = await api(`/threads/${threadId}/runs/wait`, apiKey, {
-        assistant_id: ASSISTANT_ID,
-        input: { messages: [{ role: "user", content: message }], ticket_id: ticketId },
-      });
-      if (state && state.__error__) {
-        throw new Error(`${state.__error__.error}: ${state.__error__.message}`);
+    // Blank-line separator between SSE events. The server frames with CRLF, so match
+    // \r\n\r\n as well as bare \n\n / \r\r — splitting only on "\n\n" would never fire.
+    const SSE_SEP = /\r\n\r\n|\n\n|\r\r/;
+
+    // Parse one SSE block ("event: <mode>\n data: <json>") into {event, data}.
+    function parseSSE(block) {
+      let event = "message"; const dataLines = [];
+      for (const line of block.split(/\r\n|\n|\r/)) {
+        if (line.startsWith("event:")) event = line.slice(6).trim();
+        else if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
       }
-      return state; // final thread state: { messages: [...], ticket_id: "..." }
+      if (!dataLines.length) return null;
+      const raw = dataLines.join("\n");
+      try { return { event, data: JSON.parse(raw) }; } catch { return { event, data: raw }; }
     }
+
+    // Stream the run: light up each node as its update arrives, keep the last full state
+    // (from the "values" mode) as the source for the final report.
+    async function streamRun(application, apiKey) {
+      const { thread_id } = await postJSON("/threads", apiKey, {});
+      const res = await fetch(location.origin + `/threads/${thread_id}/runs/stream`, {
+        method: "POST", headers: headers(apiKey),
+        body: JSON.stringify({ assistant_id: ASSISTANT_ID, input: { application }, stream_mode: ["updates", "values"] }),
+      });
+      if (!res.ok || !res.body) throw new Error(`${res.status} ${res.statusText} — ${(await res.text().catch(() => "")).slice(0, 300)}`);
+
+      const reader = res.body.getReader(); const dec = new TextDecoder();
+      let buf = "", lastValues = null;
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let m;
+        while ((m = SSE_SEP.exec(buf))) {
+          const ev = parseSSE(buf.slice(0, m.index)); buf = buf.slice(m.index + m[0].length);
+          if (!ev) continue;
+          if (ev.event === "updates" && ev.data && typeof ev.data === "object") {
+            for (const node of Object.keys(ev.data)) markStage(node, ev.data[node]);
+          } else if (ev.event === "values" && ev.data && typeof ev.data === "object") {
+            lastValues = ev.data;
+          } else if (ev.event === "error") {
+            throw new Error(typeof ev.data === "string" ? ev.data : JSON.stringify(ev.data));
+          }
+        }
+      }
+      if (lastValues && lastValues.__error__) throw new Error(`${lastValues.__error__.error}: ${lastValues.__error__.message}`);
+      return lastValues;
+    }
+
+    // Fallback if streaming isn't available: block for the final state, no live progress.
+    async function waitRun(application, apiKey) {
+      const { thread_id } = await postJSON("/threads", apiKey, {});
+      const state = await postJSON(`/threads/${thread_id}/runs/wait`, apiKey, {
+        assistant_id: ASSISTANT_ID, input: { application },
+      });
+      if (state && state.__error__) throw new Error(`${state.__error__.error}: ${state.__error__.message}`);
+      for (const s of STAGES) { const row = $("stage-" + s.node); if (row) row.dataset.state = "done"; }
+      return state;
+    }
+
+    // ---- wiring ------------------------------------------------------------
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const message = $("message").value.trim();
-      const ticketId = $("ticket").value.trim();
-      if (!message) return;
+      const application = readApplication();
+      if (!application.business_name) { statusEl.textContent = "business name required"; return; }
 
-      runBtn.disabled = true;
-      statusEl.textContent = "thinking…";
-      // Optimistically show the user's message + a placeholder while we wait.
-      transcript.append(node("msg user", message));
-      const thinking = node("meta", "assistant is working…");
-      transcript.append(thinking);
+      runBtn.disabled = true; statusEl.textContent = "analyzing…";
+      resetPipeline();
+      const first = pipelineEl.querySelector(".stage"); if (first) first.dataset.state = "running";
+      const apiKey = $("apikey").value.trim();
 
       try {
-        const state = await run(message, ticketId, $("apikey").value.trim());
-        render(state.messages);
-        $("message").value = "";
-        statusEl.textContent = "";
+        let state;
+        try { state = await streamRun(application, apiKey); }
+        catch (streamErr) {
+          // Network/stream problem → fall back to the blocking endpoint before giving up.
+          statusEl.textContent = "streaming unavailable — waiting…";
+          state = await waitRun(application, apiKey);
+        }
+        // Safety net: if the stream ended without a final state (e.g. nothing parsed), don't
+        // silently render nothing — fetch the result directly.
+        if (!state || !state.report) {
+          statusEl.textContent = "finalizing…";
+          state = await waitRun(application, apiKey);
+        }
+        renderReport(state && state.report);
+        statusEl.textContent = "done";
       } catch (err) {
-        thinking.remove();
-        transcript.append(node("error", `Error: ${err && err.message ? err.message : err}`));
+        errBox.replaceChildren(el("p", "error", `Error: ${err && err.message ? err.message : err}`));
         statusEl.textContent = "";
       } finally {
         runBtn.disabled = false;
       }
     });
 
-    resetBtn.addEventListener("click", () => {
-      threadId = null;
-      transcript.replaceChildren();
-      statusEl.textContent = "new thread";
+    sampleBtn.addEventListener("click", () => {
+      // Synthetic mid-market restaurant — lands as a clean "quote" (~risk 42). Bump the loss
+      // figures to push it into "refer"/"decline".
+      const s = {
+        business_name: "Golden Fork Bistro", industry: "restaurant", state: "TX",
+        years_in_business: 7, annual_revenue: 4200000, tiv: 1800000, requested_limit: 1500000,
+        deductible: 25000, construction_type: "joisted_masonry", sprinklered: true,
+        prior_claims_count: 2, prior_claims_incurred: 60000,
+        notes: "Full-service restaurant; hood suppression serviced annually.",
+      };
+      for (const [k, v] of Object.entries(s)) {
+        const node = $(k); if (!node) continue;
+        if (node.type === "checkbox") node.checked = Boolean(v); else node.value = v;
+      }
+      statusEl.textContent = "sample loaded";
     });
   </script>
 </body>
